@@ -12,6 +12,8 @@ import plotly.graph_objects as go
 import scipy.integrate
 from scipy.integrate import trapz
 import numpy as np
+import dash_loading_spinners as dls
+import dash_gif_component as gif
 
 app = Dash(__name__, title="BitumenFTIR")
 
@@ -80,68 +82,120 @@ result_style = {    "borderWidth": "5px",
                     "backgroundColor": "#ecf4f7",
                }
 
+SIDEBAR_STYLE = {
+    "position": "fixed",
+    "top": 0,
+    "left": 0,
+    "bottom": 0,
+    "width": "16rem",
+    "padding": "2rem 1rem",
+    "background-color": "#f8f9fa",
+    'fontFamily': "Helvetica"
+}
+
+# the styles for the main content position it to the right of the sidebar and
+# add some padding.
+
+CONTENT_STYLE = {
+    "margin-left": "18rem",
+    "margin-right": "0.5rem",
+    "padding": "0.25rem 0.5rem",
+}
 
 
-# Define the layout of the app
-app.layout = html.Div([
-    html.H3('Functional Indices based on FTIR Spectroscopy for neat asphalt binders',
-            style={
+#Carbonyl Radio Button
+carbonyl_options = [{'label': u'A\u2081\u2086\u2083\u2085\u208B\u2081\u2086\u2085\u2085'+' + '
+            + u'A\u2081\u2086\u2089\u2080\u208B\u2081\u2087\u2082\u2080',
+            'value': True},
+                           {'label': u'A\u2081\u2086\u2086\u2080\u208B\u2081\u2087\u2085\u2083', 'value': False}]
+
+#Sidebar content
+
+sidebar = html.Div(
+    [
+        html.H2("BitumenFTIR"),
+        html.H3("About the App"),
+        html.Hr(),
+        html.P(children=[
+            '''By using this application, it is possible to upload a CSV file from an FTIR spectrometer.
+                The first column of the file should contain wavenumber values, and the second column should contain absorption values.
+                The application will present the spectrum in graphical form and will compute the functional indices based on the method provided in '''
+                ,html.A('this paper', href='https://doi.org/10.1080/14680629.2023.2180990',target='_blank'),'''.
+                If multiple files are uploaded, the application can generate a summary of the results with the click of the SUMMARY button.''']
+        ,style={'color':'#2c4965'}),
+        html.H5("Carbonyl Area Integration Limits:"),
+        dcc.RadioItems(carbonyl_options,True,id='carbonyl-type'),
+
+        gif.GifPlayer(
+        gif='assets/QZSh.gif',
+        still='assets/QZSh.png',autoplay=True)
+
+    ],
+    style=SIDEBAR_STYLE,
+)
+
+#Main window
+
+content = html.Div([html.H3('Functional Indices based on FTIR Spectroscopy for neat asphalt binders',
+                style={
+                'line-height': '40px',
+                'textAlign': 'left',
                 'height': '40px',
                 'color':'white',
                 'background-color':'#0A1612',
                 'margin':'0px',
                 'fontFamily': "Helvetica","borderRadius": "5px","boxShadow": "2px 2px 2px 2px rgba(0, 0, 50, 0.16)"}),
-
-html.Div([
-
-    html.Div([html.H3('About the App'),
-              dcc.Markdown('''By using this application, it is possible to upload a CSV file from an FTIR spectrometer.
-              The first column of the file should contain wavenumber values, and the second column should contain absorption values.
-              The application will present the spectrum in graphical form and will compute the functional indices based on the method provided in https://doi.org/10.1080/14680629.2023.2180990.
-              If multiple files are uploaded, the application can generate a summary of the results with the click of the SUMMARY button.''')],
-             className='six columns',style=dict(margin='5px',fontFamily='Helvetica',width='50%')),
-
-
-              html.Div([dcc.Upload(
-        id='upload-data',
-        children=html.Div([
-            'Drag and Drop or ',
-            html.A('Select CSV Files')
-        ]),
-        style={
-            'width': '50%',
-            'height': '50px',
-            'lineHeight': '50px',
-            'borderWidth': '2px',
-            'borderStyle': 'dashed',
-            'borderRadius': '10px',
-            'textAlign': 'center',
-            'margin': '5px',
-            'backgroundColor':'#ecf4f7',
-            'color' : 'black',
-            'boxShadow': '0px 1px 5px 2px rgba(0, 0, 50, 0.16)',
-            'fontFamily': "Helvetica"
-        },
-        # Allow multiple files to be uploaded
-        multiple=True
-    )],className='six columns')
-
-
-],className='row',style=dict(width='100%'))
+                html.Hr(),
+                html.Div([
+                dcc.Upload(
+                id='upload-data',
+                children=html.Div([
+                'Drag and Drop or ',
+                html.A('Select CSV Files')
+                ]),
+                style={
+                    'width': '50%',
+                    'height': '50px',
+                    'lineHeight': '50px',
+                    'borderWidth': '2px',
+                    'borderStyle': 'dashed',
+                    'borderRadius': '10px',
+                    'textAlign': 'center',
+                    'margin': '5px',
+                    'backgroundColor':'#ecf4f7',
+                    'color' : 'black',
+                    'boxShadow': '0px 1px 5px 2px rgba(0, 0, 50, 0.16)',
+                    'fontFamily': "Helvetica"
+                },
+                # Allow multiple files to be uploaded
+                multiple=True
+            )],style=dict(width='100%'))
 
     ,
 
-    html.Div([html.Button(id='submit-button-state', n_clicks=0, children='SUMMARY')]),
+
+
+
+    html.Button(id='submit-button-state', n_clicks=0, children='SUMMARY'),
     #dcc.Graph(id='Mygraph'),
     html.H3('',style={'color':'#123C69'}),
-    html.Div(id='results'),
-    html.H3('Summary of the results',style={'color':'black','fontFamily': "Helvetica",'margin':'5px'}),
-    html.Div(id='summary'),
-    html.H5('©2023 Koorosh Naderi',style={'color':'black','fontFamily': "Helvetica",'text-align':'right'})
-],style={'backgroundColor':'white',"borderRadius": "5px"})
+    dls.RevolvingDot(html.Div(id='results'),color="#435278",
+                        speed_multiplier=2,
+                        width=125, radius=8,fullscreen=True),
+    html.H3('Summary of the results',className='twelve columns',style={'color':'black','fontFamily': "Helvetica",'margin':'5px'}),
+    html.Div(id='summary',className='twelve columns'),
+    html.Hr(),
+    html.H5(html.A('©2023 Koorosh Naderi', href='https://www.linkedin.com/in/koorosh-naderi',target='_blank'),style={'color':'black','fontFamily': "Helvetica",'text-align':'right'})
+],style=CONTENT_STYLE)
+
+
+# Define the layout of the app
+app.layout = html.Div([sidebar,
+                content],style={'backgroundColor':'white',"borderRadius": "5px"})
+
 
 # Define the function to parse the uploaded file
-def parse_contents(contents, filename):
+def parse_contents(contents, filename, value):
 
     global all_results
 
@@ -160,14 +214,17 @@ def parse_contents(contents, filename):
             A_743 = area_wbl(df,734,783,1)
             A_814 = area_wbl(df,783,838,3)
             A_864 = area_wbl(df,838,912,3)
-            #A_1030 = area_wbl(data,995,1047,3)
+            #A_1030 = area_wbl(df,995,1047,3)
             A_1030 = area_wbl(df,992,1077,3)
             A_1376 = area_wbl(df,1350,1390,3)
             A_1460 = area_wbl(df,1395,1525,3)
             A_1600 = area_wbl(df,1535,1670,3)
-            #A_1700 = area_wbl(data,1660,1753,3)
-            #A_1700 = area_wbl(data,1680,1745,3)
-            A_1700 = area_wbl(df,1690,1720,0.5) + area_wbl(df,1635,1655,0.5)
+            #A_1700 = area_wbl(df,1660,1753,3)
+            #A_1700 = area_wbl(df,1680,1745,3)
+            if value == True:
+                A_1700 = area_wbl(df,1690,1720,0.5) + area_wbl(df,1635,1655,0.5)
+            else:
+                A_1700 = area_wbl(df,1660,1753,3)
             A_2862 = area_wbl(df,2820,2880,3)
             A_2953 = area_wbl(df,2880,2990,3)
 
@@ -243,22 +300,26 @@ def parse_contents(contents, filename):
 
 
             # Compute the results
-            all_results = all_results.append({'File Name':filename,'Aromaticity Index':ArI,'Aliphaticity Index':AliI,
+
+            new_row_all = pd.Series({'File Name':filename,'Aromaticity Index':ArI,'Aliphaticity Index':AliI,
                                               'Branched':Branched,'Long Chains':LongChains,
                                               'Carbonyl':Carbonyl,'Sulphoxide':Sulph,
                                               'Ring Aromatics':RingAro,'Substitute 1':Sub1,
-                                              'Substitute 2':Sub2,'FAL':FAL},ignore_index=True)
+                                              'Substitute 2':Sub2,'FAL':FAL})
+
+            all_results = pd.concat([all_results,new_row_all.to_frame().T],ignore_index=True)
+
+            new_row_result = pd.Series({'Aromaticity Index':round(ArI,4),'Aliphaticity Index':round(AliI,4),
+                                    'Branched':round(Branched,4),'Long Chains':round(LongChains,4),
+                                    'Carbonyl':round(Carbonyl,6),'Sulphoxide':round(Sulph,5),
+                                    'Ring Aromatics':round(RingAro,4),'Substitute 1':round(Sub1,4),
+                                    'Substitute 2':round(Sub2,4),'FAL':round(FAL,4)})
 
             result = pd.DataFrame(columns = ['Aromaticity Index','Aliphaticity Index','Branched',
                                              'Long Chains','Carbonyl','Sulphoxide','Ring Aromatics',
                                              'Substitute 1','Substitute 2','FAL'])
 
-            result = result.append({'Aromaticity Index':round(ArI,4),'Aliphaticity Index':round(AliI,4),
-                                    'Branched':round(Branched,4),'Long Chains':round(LongChains,4),
-                                    'Carbonyl':round(Carbonyl,4),'Sulphoxide':round(Sulph,5),
-                                    'Ring Aromatics':round(RingAro,4),'Substitute 1':round(Sub1,4),
-                                    'Substitute 2':round(Sub2,4),'FAL':round(FAL,4)},
-                                  ignore_index=True)
+            result = pd.concat([result,new_row_result.to_frame().T],ignore_index=True)
 
             # Return the scatter plot and results in a Div
 
@@ -290,17 +351,20 @@ def parse_contents(contents, filename):
 # Define the callback to parse the uploaded file
 @app.callback(Output('results', 'children'),
               Input('upload-data', 'contents'),
-              Input('upload-data', 'filename'))
+              Input('upload-data', 'filename'),
+                Input('carbonyl-type','value'))
 
-def update_output(contents, filename):
+def update_output(contents, filename, value):
     if contents is not None:
         children = [
-            parse_contents(contents[i], filename[i]) for i in range(len(contents))
+            parse_contents(contents[i], filename[i], value) for i in range(len(contents))
         ]
-        # Filter the results based on the selected checkboxes
+        # Filter the results based on the selected option
         # Return the filtered results
 
         return children
+
+#Summary
 
 @app.callback(Output('summary', 'children'),
               Input('submit-button-state', 'n_clicks'))
@@ -317,20 +381,14 @@ def summary_output(n_clicks):
 
             html.Tbody([
                 html.Tr([
-                    html.Td(round(temp.iloc[i][col],4) if isfloat(temp.iloc[i][col]) else temp.iloc[i][col]
+                    html.Td(round(temp.iloc[i][col],6) if isfloat(temp.iloc[i][col]) else temp.iloc[i][col]
                             ,style=summary_style) for col in temp.columns
                 ]) for i in range(len(temp))
             ])
         ],style={'margin':'0px 0px 0px 40px'})
     ],style=result_style)
 
-
-    # Run the app
-if __name__ == '__main__':
-    app.run_server(debug=True, use_reloader=False)
-
-
-
+# Run the app
 
 if __name__ == '__main__':
     app.run_server(debug=True)
