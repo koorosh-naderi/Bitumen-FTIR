@@ -421,7 +421,8 @@ def disable_button(*args):
 
 def sample_output(n_clicks, value):
     if n_clicks:
-        df = pd.read_csv(('assets/Sample Pen 160-220.csv'),delimiter=';',header=None)
+        url = 'https://raw.githubusercontent.com/koorosh-naderi/Bitumen-FTIR/main/src/assets/Sample%20Pen%20160-220.CSV'
+        df = pd.read_csv((url,delimiter=';',header=None)
         df = df.replace('E', 'e', regex=True).replace(',', '.', regex=True)
         df = df.apply(pd.to_numeric, args=('coerce',))
 
