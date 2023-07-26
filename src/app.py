@@ -5,23 +5,20 @@
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output, State
 import plotly.express as px
+import numpy as np
 import pandas as pd
 import base64
 import io
 import plotly.graph_objects as go
 import scipy.integrate
 from scipy.integrate import trapz
-import numpy as np
 import dash_loading_spinners as dls
 import dash_gif_component as gif
 
 app = Dash(__name__, title="BitumenFTIR", prevent_initial_callbacks="initial_duplicate")
 
-# Declare server for Heroku deployment. Needed for Procfile.
+# Declare server for deployment.
 server = app.server
-
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
 
 # Area Calculation Function
 def area_wbl(df,minlim,maxlim,tol):
@@ -41,6 +38,7 @@ def bit_peaks(data,ll,hl):
     else:
         return np.NAN, np.NAN
 
+#isfloat Function
 def isfloat(num):
     try:
         float(num)
@@ -48,6 +46,7 @@ def isfloat(num):
     except ValueError:
         return False
 
+#Functional Indices Function
 def functional_indices(df,value):
     A_724 = area_wbl(df,710,734,3)
     A_743 = area_wbl(df,734,783,1)
@@ -79,17 +78,38 @@ def functional_indices(df,value):
     if (A_864+A_814+A_743)!=0:
         Sub1 = A_864/(A_864+A_814+A_743)
         Sub2 = A_814/(A_864+A_814+A_743)
+        Sub3 = A_743/(A_864+A_814+A_743)
     else:
         Sub1 = float("nan")
         Sub2 = float("nan")
+        Sub3 = float("nan")
     FAL = (A_2862+A_2953)/(A_2862+A_2953+A_1600)
 
-    return list((ArI,AliI,Branched,LongChains,Carbonyl,Sulph,RingAro,Sub1,Sub2,FAL))
+    return list((ArI,AliI,Branched,LongChains,Carbonyl,Sulph,RingAro,Sub1,Sub2,Sub3,FAL))
+
+#Peak Finder for the curve function
+def peak_finder(df):
+    x_peak = np.zeros(11)
+    y_peak = np.zeros(11)
+
+    x_peak[0],y_peak[0] = bit_peaks(df,710,734)
+    x_peak[1],y_peak[1] = bit_peaks(df,734,783)
+    x_peak[2],y_peak[2] = bit_peaks(df,783,838)
+    x_peak[3],y_peak[3] = bit_peaks(df,838,912)
+    x_peak[4],y_peak[4] = bit_peaks(df,995,1047)
+    x_peak[5],y_peak[5] = bit_peaks(df,1350,1390)
+    x_peak[6],y_peak[6] = bit_peaks(df,1395,1525)
+    x_peak[7],y_peak[7] = bit_peaks(df,1535,1670)
+    x_peak[8],y_peak[8] = bit_peaks(df,1635,1720)
+    x_peak[9],y_peak[9] = bit_peaks(df,2820,2880)
+    x_peak[10],y_peak[10] = bit_peaks(df,2880,2990)
+
+    return x_peak, y_peak
 
 
 all_results = pd.DataFrame(columns = ['File Name','Aromaticity Index','Aliphaticity Index','Branched',
                                       'Long Chains','Carbonyl',
-                                      'Sulphoxide','Ring Aromatics','Substitute 1','Substitute 2','FAL'])
+                                      'Sulphoxide','Ring Aromatics','Substitute 1','Substitute 2','Substitute 3','FAL'])
 
 # Styles
 head_style = {'fontSize':'13px','color':'black',
@@ -218,14 +238,14 @@ content = html.Div([html.H3('Functional Indices based on FTIR Spectroscopy for n
 
 
     #dcc.Graph(id='Mygraph'),
-    html.H3('',style={'color':'#123C69'}),
+
     dls.RevolvingDot(html.Div(id='results'),color="#435278",
                         speed_multiplier=2,
                         width=125, radius=8,fullscreen=True),
-    html.H3('Summary of the results',className='twelve columns',style={'color':'black','fontFamily': "Helvetica",'margin':'5px'}),
-    html.Div(id='summary',className='twelve columns'),
+    html.Div(id='summary'),
     html.Hr(),
-    html.H5(html.A('©2023 Koorosh Naderi', href='https://www.linkedin.com/in/koorosh-naderi',target='_blank'),style={'color':'black','fontFamily': "Helvetica",'text-align':'right'})
+    html.H5(html.A('©2023 Koorosh Naderi', href='https://www.linkedin.com/in/koorosh-naderi',target='_blank'),
+            style={'color':'black','fontFamily': "Helvetica",'text-align':'right'})
 ],style=CONTENT_STYLE)
 
 
@@ -256,20 +276,7 @@ def parse_contents(contents, filename, value):
             labels = ['-CH2','','{ CHaro','','S=O','CH3 Aliphatic','CH3 & CH2 Aliphatic',
                       'C=C','C=O','C-H2, C-H3 Aliphatic Hydrogen','C-H2, C-H3']
 
-            x_peak = np.zeros(11)
-            y_peak = np.zeros(11)
-
-            x_peak[0],y_peak[0] = bit_peaks(df,710,734)
-            x_peak[1],y_peak[1] = bit_peaks(df,734,783)
-            x_peak[2],y_peak[2] = bit_peaks(df,783,838)
-            x_peak[3],y_peak[3] = bit_peaks(df,838,912)
-            x_peak[4],y_peak[4] = bit_peaks(df,995,1047)
-            x_peak[5],y_peak[5] = bit_peaks(df,1350,1390)
-            x_peak[6],y_peak[6] = bit_peaks(df,1395,1525)
-            x_peak[7],y_peak[7] = bit_peaks(df,1535,1670)
-            x_peak[8],y_peak[8] = bit_peaks(df,1635,1720)
-            x_peak[9],y_peak[9] = bit_peaks(df,2820,2880)
-            x_peak[10],y_peak[10] = bit_peaks(df,2880,2990)
+            x_peak, y_peak = peak_finder(df)
 
             # Create the scatter plot
 
@@ -310,7 +317,8 @@ def parse_contents(contents, filename, value):
                                               'Branched':indices_results[2],'Long Chains':indices_results[3],
                                               'Carbonyl':indices_results[4],'Sulphoxide':indices_results[5],
                                               'Ring Aromatics':indices_results[6],'Substitute 1':indices_results[7],
-                                              'Substitute 2':indices_results[8],'FAL':indices_results[9]})
+                                              'Substitute 2':indices_results[8],'Substitute 3':indices_results[9],
+                                              'FAL':indices_results[10]})
 
             all_results = pd.concat([all_results,new_row_all.to_frame().T],ignore_index=True)
 
@@ -318,11 +326,12 @@ def parse_contents(contents, filename, value):
                                     'Branched':round(indices_results[2],4),'Long Chains':round(indices_results[3],4),
                                     'Carbonyl':round(indices_results[4],6),'Sulphoxide':round(indices_results[5],5),
                                     'Ring Aromatics':round(indices_results[6],4),'Substitute 1':round(indices_results[7],4),
-                                    'Substitute 2':round(indices_results[8],4),'FAL':round(indices_results[9],4)})
+                                    'Substitute 2':round(indices_results[8],4),'Substitute 3':round(indices_results[9],4),
+                                    'FAL':round(indices_results[10],4)})
 
             result = pd.DataFrame(columns = ['Aromaticity Index','Aliphaticity Index','Branched',
                                              'Long Chains','Carbonyl','Sulphoxide','Ring Aromatics',
-                                             'Substitute 1','Substitute 2','FAL'])
+                                             'Substitute 1','Substitute 2','Substitute 3','FAL'])
 
             result = pd.concat([result,new_row_result.to_frame().T],ignore_index=True)
 
@@ -352,8 +361,6 @@ def parse_contents(contents, filename, value):
             'There was an error processing this file.'
         ],style={'color':'#AC3B61','fontFamily':'Calibri'})
 
-
-
 # Define the callback to parse the uploaded file
 @app.callback(Output('results', 'children'),
               Output('submit-button-state','disabled'),
@@ -374,42 +381,31 @@ def update_output(contents, filename, value):
         children = []
         return children, True
 
-#@app.callback(
-#Output('scatter-plot', 'figure'),
-#Input('scatter-plot', 'relayoutData'),
-#State('scatter-plot', 'figure'),
-#prevent_initial_call=True)
-#def update_graph(relOut, fig):
-#    xmin = relOut["xaxis.range"][0]
-#    xmax = relOut["xaxis.range"][1]
-#    dff = df[df[0].between(xmin, xmax)]
-#    fig.update_layout(yaxis=dict(range=(dff[1].min(), dff[1].max())))
-#    return fig
-
 #Summary
 
 @app.callback(Output('summary', 'children'),
               Input('submit-button-state', 'n_clicks'))
 
 def summary_output(n_clicks):
-    global all_results
+    if n_clicks:
+        global all_results
 
 
-    temp = all_results
-    all_results = pd.DataFrame(columns=all_results.columns)
+        temp = all_results
+        all_results = pd.DataFrame(columns=all_results.columns)
 
-    return html.Div([
-           html.Table([
-                html.Thead(html.Tr([html.Th(col,style=head_style) for col in temp.columns])),
+        return html.Div([html.H3('Summary of the results',style={'color':'black','fontFamily': "Helvetica",'margin':'5px'}),
+               html.Table([
+                    html.Thead(html.Tr([html.Th(col,style=head_style) for col in temp.columns])),
 
-                html.Tbody([
-                    html.Tr([
-                        html.Td(round(temp.iloc[i][col],6) if isfloat(temp.iloc[i][col]) else temp.iloc[i][col]
-                                ,style=summary_style) for col in temp.columns
-                    ]) for i in range(len(temp))
-                ])
-            ],style={'margin':'0px 0px 0px 30px'})
-        ],style=result_style)
+                    html.Tbody([
+                        html.Tr([
+                            html.Td(round(temp.iloc[i][col],6) if isfloat(temp.iloc[i][col]) else temp.iloc[i][col]
+                                    ,style=summary_style) for col in temp.columns
+                        ]) for i in range(len(temp))
+                    ])
+                ],style={'margin':'0px 0px 0px 30px'})
+            ],style=result_style)
 
 @app.callback(Output('submit-button-state', 'disabled',allow_duplicate=True), Input('submit-button-state', 'n_clicks'))
 def disable_button(*args):
@@ -421,8 +417,10 @@ def disable_button(*args):
 
 def sample_output(n_clicks, value):
     if n_clicks:
+
         url = 'https://raw.githubusercontent.com/koorosh-naderi/Bitumen-FTIR/main/src/assets/Sample%20Pen%20160-220.CSV'
-        df = pd.read_csv(url,delimiter=';',header=None)
+
+        df = pd.read_csv((url),delimiter=';',header=None)
         df = df.replace('E', 'e', regex=True).replace(',', '.', regex=True)
         df = df.apply(pd.to_numeric, args=('coerce',))
 
@@ -431,20 +429,7 @@ def sample_output(n_clicks, value):
         labels = ['-CH2','','{ CHaro','','S=O','CH3 Aliphatic','CH3 & CH2 Aliphatic',
                           'C=C','C=O','C-H2, C-H3 Aliphatic Hydrogen','C-H2, C-H3']
 
-        x_peak = np.zeros(11)
-        y_peak = np.zeros(11)
-
-        x_peak[0],y_peak[0] = bit_peaks(df,710,734)
-        x_peak[1],y_peak[1] = bit_peaks(df,734,783)
-        x_peak[2],y_peak[2] = bit_peaks(df,783,838)
-        x_peak[3],y_peak[3] = bit_peaks(df,838,912)
-        x_peak[4],y_peak[4] = bit_peaks(df,995,1047)
-        x_peak[5],y_peak[5] = bit_peaks(df,1350,1390)
-        x_peak[6],y_peak[6] = bit_peaks(df,1395,1525)
-        x_peak[7],y_peak[7] = bit_peaks(df,1535,1670)
-        x_peak[8],y_peak[8] = bit_peaks(df,1635,1720)
-        x_peak[9],y_peak[9] = bit_peaks(df,2820,2880)
-        x_peak[10],y_peak[10] = bit_peaks(df,2880,2990)
+        x_peak, y_peak = peak_finder(df)
 
         # Create the scatter plot
 
@@ -464,7 +449,6 @@ def sample_output(n_clicks, value):
                     marker=dict(size=10,
                                   line=dict(width=1,
                                             color='DarkSlateGrey'))
-
                 ))
 
         fig.update_layout(
@@ -479,20 +463,22 @@ def sample_output(n_clicks, value):
                                   yaxis=dict(fixedrange=False, zeroline=True, zerolinewidth=1, zerolinecolor='rgba(44, 73, 101,0.7)',
                                              showgrid=True, gridwidth=0.5, gridcolor='rgba(44, 73, 101,0.5)'))
 
-                # Compute the results
+        # Compute the results
+
         new_row_result = pd.Series({'Aromaticity Index':round(indices_results[0],4),'Aliphaticity Index':round(indices_results[1],4),
                                     'Branched':round(indices_results[2],4),'Long Chains':round(indices_results[3],4),
                                     'Carbonyl':round(indices_results[4],6),'Sulphoxide':round(indices_results[5],5),
                                     'Ring Aromatics':round(indices_results[6],4),'Substitute 1':round(indices_results[7],4),
-                                    'Substitute 2':round(indices_results[8],4),'FAL':round(indices_results[9],4)})
+                                    'Substitute 2':round(indices_results[8],4),'Substitute 3':round(indices_results[9],4),
+                                    'FAL':round(indices_results[10],4)})
 
         result = pd.DataFrame(columns = ['Aromaticity Index','Aliphaticity Index','Branched',
                                                  'Long Chains','Carbonyl','Sulphoxide','Ring Aromatics',
-                                                 'Substitute 1','Substitute 2','FAL'])
+                                                 'Substitute 1','Substitute 2','Substitute 3','FAL'])
 
         result = pd.concat([result,new_row_result.to_frame().T],ignore_index=True)
 
-                # Return the scatter plot and results in a Div
+        # Return the scatter plot and results in a Div
 
         return html.Div([
                     dcc.Graph(id='scatter-plot', figure=fig),
@@ -507,6 +493,7 @@ def sample_output(n_clicks, value):
                         ])
                     ],style={'margin':'0px 0px 0px 30px'})
                 ],style=result_style)
+
 
 # Run the app
 
