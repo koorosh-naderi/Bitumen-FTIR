@@ -24,7 +24,7 @@ server = app.server
 def area_wbl(df,minlim,maxlim,tol):
     minlimT = float(df[(df[1] == df[(df[0]<(minlim+tol)) & (df[0]>(minlim-tol))][1].min()) & (df[0]<(minlim+tol)) & (df[0]>(minlim-tol))][0].mean())
     maxlimT = float(df[(df[1] == df[(df[0]<(maxlim+tol)) & (df[0]>(maxlim-tol))][1].min()) & (df[0]<(maxlim+tol)) & (df[0]>(maxlim-tol))][0].mean())
-    area = trapz(df[(df[0]<maxlimT) & (df[0]>minlimT)][1],df[(df[0]<maxlimT) & (df[0]>minlimT)][0])
+    area = trapz(df[(df[0]<=maxlimT) & (df[0]>=minlimT)][1],df[(df[0]<=maxlimT) & (df[0]>=minlimT)][0])
     HBL = (df[df[0] == min(df[0], key=lambda x:abs(x-maxlimT))].iat[0,0] - df[df[0] == min(df[0], key=lambda x:abs(x-minlimT))].iat[0,0])
     ABL = (df[df[0] == min(df[0], key=lambda x:abs(x-maxlimT))].iat[0,1] + df[df[0] == min(df[0], key=lambda x:abs(x-minlimT))].iat[0,1])/2
     return area - abs(HBL*ABL) if area - abs(HBL*ABL)>0 else 0
